@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin | Learning Journal</title>
+  <link rel="stylesheet" href="CSS/admin.css">
+  
+
+</head>
+<body data-page="admin">
+  <!-- Sidebar Toggle -->
+  <div class="sidebar-toggle" onclick="toggleSidebar()">☰</div>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <h3>✏️ Group Feedback</h3>
+    <textarea id="bulkRemarkText" placeholder="Enter remark for selected students..."></textarea>
+    <button class="save-btn" onclick="applyBulkRemark()">Apply to Selected</button>
+
+    <h3>📊 Statistics</h3>
+    <div id="statsContainer"></div>
+  </div>
+
+  <!-- Filters always on top -->
+  <div class="filters">
+    <button class="back-btn" onclick="goBack()">⬅ Return</button>
+
+    <label for="searchBox">Search:</label>
+    <input type="text" id="searchBox" placeholder="USN, Name, Course">
+
+    <label for="semesterFilter">Semester:</label>
+    <select id="semesterFilter"><option value="">All</option></select>
+
+    <label for="sectionFilter">Section:</label>
+    <select id="sectionFilter"><option value="">All</option></select>
+
+    <label for="sortBy">Sort By:</label>
+    <select id="sortBy">
+      <option value="week">Week</option>
+      <option value="name">Name</option>
+      <option value="usn">USN</option>
+      <option value="semester">Semester</option>
+    </select>
+
+    <button class="reset-btn" onclick="resetFilters()">Reset</button>
+  </div>
+
+  <h1>📘 Admin Panel - All Saved Entries</h1>
+
+  <div id="entriesList" class="entries"></div>
+
+  <!-- Delete Button top-right -->
+  <button id="deleteBtn" onclick="deleteSelectedEntries()">🗑️ Delete Selected Entries</button>
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const token = getCookie("token");
+  if(!token){
+    alert("Please login first.");
+    window.location.href = "login.html";
+    return;
+  }
+
+  const payload = parseJwt(token);
+  if(payload.role !== "admin"){
+    alert("Access denied: Admins only.");
+    window.location.href = "login.html";
+    return;
+  }
+
+  let allEntries = [];
+
+  async function fetchAllEntries() {
+    try {
+      const res = await fetch("http://localhost:5000/api/journal", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if(!res.ok) throw new Error("Failed to fetch entries");
+      const entries = await res.json();
+      return entries;
+    } catch(err) {
+      alert("❌ Could not load entries: " + err.message);
+      return [];
+    }
+  }
+
+  function populateFilters(entries) {
+    const semesterSet = new Set();
+    const sectionSet = new Set();
+    entries.forEach(e => { if(e.semester) semesterSet.add(e.semester); if(e.classSection) sectionSet.add(e.classSection); });
+
+    const semesterFilter = document.getElementById("semesterFilter");
+    const sectionFilter = document.getElementById("sectionFilter");
+    semesterFilter.innerHTML = `<option value="">All</option>`; sectionFilter.innerHTML = `<option value="">All</option>`;
+    semesterSet.forEach(sem => semesterFilter.innerHTML += `<option value="${sem}">Semester ${sem}</option>`);
+    sectionSet.forEach(sec => sectionFilter.innerHTML += `<option value="${sec}">Section ${sec}</option>`);
+  }
+
+  function highlight(text, term) {
+    if (!term) return text;
+    const regex = new RegExp(`(${term})`, "gi");
+    return text.replace(regex, "<span class='highlight'>$1</span>");
+  }
+
+  async function renderEntries() {
+    allEntries = await fetchAllEntries();
+    populateFilters(allEntries);
+
+    const entriesList = document.getElementById("entriesList");
+    const semesterFilter = document.getElementById("semesterFilter").value;
+    const sectionFilter = document.getElementById("sectionFilter").value;
+    const searchTerm = document.getElementById("searchBox").value.trim();
+    const sortBy = document.getElementById("sortBy").value;
+
+    let filtered = [...allEntries];
+    if(semesterFilter) filtered = filtered.filter(e => e.semester == semesterFilter);
+    if(sectionFilter) filtered = filtered.filter(e => e.classSection == sectionFilter);
+    if(searchTerm){
+      const termUpper = searchTerm.toUpperCase();
+      filtered = filtered.filter(e =>
+        (e.usn && e.usn.toUpperCase().includes(termUpper)) ||
+        (e.studentName && e.studentName.toUpperCase().includes(termUpper)) ||
+        (e.courseCode && e.courseCode.toUpperCase().includes(termUpper)) ||
+        (e.courseName && e.courseName.toUpperCase().includes(termUpper))
+      );
+    }
+
+    filtered.sort((a,b) => {
+      if(sortBy==="week") return a.week - b.week;
+      if(sortBy==="name") return (a.studentName||"").localeCompare(b.studentName||"");
+      if(sortBy==="usn") return (a.usn||"").localeCompare(b.usn||"");
+      if(sortBy==="semester") return (a.semester||"").localeCompare(b.semester||"");
+      return 0;
+    });
+
+    entriesList.innerHTML = filtered.length===0 ? "<p class='no-data'>No entries found.</p>" : "";
+
+    filtered.forEach(ent => {
+      const div = document.createElement("div");
+      div.className = "entry";
+
+      div.innerHTML = `
+        <div class="entry-header" onclick="toggleEntry(this)">
+          <input type="checkbox" class="selectEntry" value="${ent._id}" onclick="event.stopPropagation()">
+          📘 Week ${ent.week} - ${highlight(ent.studentName||"", searchTerm)} (${highlight(ent.usn||"", searchTerm)})
+        </div>
+        <div class="entry-details">
+          <strong>${highlight(ent.courseCode||"", searchTerm)} - ${highlight(ent.courseName||"", searchTerm)}</strong> | Module: ${ent.module}<br>
+          <strong>Topics Covered:</strong> ${ent.topics}<br>
+          <strong>Key Terms:</strong> ${ent.keyTerms}<br>
+          <strong>Summary:</strong> ${ent.summary}<br>
+          <strong>Doubts:</strong> ${ent.doubts}<br>
+          <strong>Absent Days:</strong> ${ent.absentDays || ""}<br>
+          <strong>Missed Content Covered:</strong> ${ent.makeup}<br>
+          <em>Semester ${ent.semester} | Section ${ent.classSection}</em>
+          <div class="remarks-box">
+            <label><strong>Remarks:</strong></label><br>
+            <textarea id="remark-${ent._id}" placeholder="Enter remark...">${ent.remark||""}</textarea>
+            <button class="save-btn" onclick="saveRemark('${ent._id}')">Save Remark</button>
+          </div>
+        </div>
+      `;
+      entriesList.appendChild(div);
+    });
+
+    renderStats(allEntries);
+  }
+
+  function toggleEntry(el){
+    const details = el.nextElementSibling;
+    details.style.display = details.style.display==="block" ? "none" : "block";
+  }
+
+  async function saveRemark(id){
+    const remarkText = document.getElementById(`remark-${id}`).value;
+    try {
+      const res = await fetch(`http://localhost:5000/api/journal/${id}`, {
+        method: "PATCH",
+        headers: {"Content-Type":"application/json", "Authorization": `Bearer ${token}`},
+        body: JSON.stringify({ remark: remarkText })
+      });
+      if(!res.ok) throw new Error("Failed to save remark");
+      alert("✅ Remark saved!");
+      renderEntries();
+    } catch(err){ alert("❌ Could not save remark: " + err.message); }
+  }
+
+  async function applyBulkRemark(){
+    const remark = document.getElementById("bulkRemarkText").value.trim();
+    const checkboxes = document.querySelectorAll(".selectEntry:checked");
+    if(!remark || checkboxes.length===0){ alert("⚠️ Enter remark and select entries"); return; }
+
+    for(let cb of checkboxes){
+      const id = cb.value;
+      await fetch(`http://localhost:5000/api/journal/${id}`, {
+        method:"PATCH",
+        headers: {"Content-Type":"application/json", "Authorization": `Bearer ${token}`},
+        body: JSON.stringify({ remark })
+      });
+    }
+    alert(`✅ Remark applied to ${checkboxes.length} entries!`);
+    renderEntries();
+  }
+
+  async function deleteSelectedEntries(){
+    const checkboxes = document.querySelectorAll(".selectEntry:checked");
+    if(checkboxes.length===0) return alert("⚠️ Select at least one entry");
+    if(!confirm(`Are you sure you want to delete ${checkboxes.length} entries? This cannot be undone.`)) return;
+
+    for(let cb of checkboxes){
+      const id = cb.value;
+      await fetch(`http://localhost:5000/api/journal/${id}`, {
+        method:"DELETE",
+        headers: {"Authorization": `Bearer ${token}`}
+      });
+    }
+    alert(`✅ Deleted ${checkboxes.length} entries!`);
+    renderEntries();
+  }
+
+  function renderStats(entries){
+    const statsContainer = document.getElementById("statsContainer");
+    if(!entries.length){ statsContainer.innerHTML="<p>No data available.</p>"; return; }
+
+    const stats = {};
+    entries.forEach(e=>{
+      if(!stats[e.semester]) stats[e.semester]={};
+      stats[e.semester][e.classSection]=(stats[e.semester][e.classSection]||0)+1;
+    });
+
+    let html="";
+    for(let sem in stats){
+      let total = Object.values(stats[sem]).reduce((a,b)=>a+b,0);
+      html+=`<div class='stat-box'><strong>Semester ${sem}: ${total} uploads</strong><ul>`;
+      for(let sec in stats[sem]) html+=`<li>Section ${sec}: ${stats[sem][sec]}</li>`;
+      html+="</ul></div>";
+    }
+    statsContainer.innerHTML=html;
+  }
+
+  function resetFilters(){
+    document.getElementById("semesterFilter").value="";
+    document.getElementById("sectionFilter").value="";
+    document.getElementById("searchBox").value="";
+    document.getElementById("sortBy").value="week";
+    renderEntries();
+  }
+
+  function goBack(){ window.location.href="index.html"; }
+  function toggleSidebar(){ document.getElementById("sidebar").classList.toggle("active"); }
+
+  document.getElementById("semesterFilter").addEventListener("change", renderEntries);
+  document.getElementById("sectionFilter").addEventListener("change", renderEntries);
+  document.getElementById("searchBox").addEventListener("input", renderEntries);
+  document.getElementById("sortBy").addEventListener("change", renderEntries);
+
+  // Initial render
+  renderEntries();
+
+  // JWT helpers
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if(parts.length === 2) return parts.pop().split(';').shift();
+  }
+  function parseJwt(token) {
+    try { return JSON.parse(atob(token.split('.')[1])); } catch { return {}; }
+  }
+
+  // Logout
+  window.logoutUser = function(){
+    document.cookie = "token=; path=/; max-age=0";
+    window.location.href = "login.html";
+  }
+});
+</script>
+
+</body>
+</html>

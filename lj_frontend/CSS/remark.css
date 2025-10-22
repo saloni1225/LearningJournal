@@ -1,0 +1,10 @@
+body { font-family:"Poppins", sans-serif; background:#fbfcff; margin:0; padding:24px; color:#173047; }
+    h1 { text-align:center; color:#1f3a6b; margin-bottom:12px; }
+    .container { max-width:760px; margin: 0 auto; background:#fff; padding:18px; border-radius:10px; box-shadow:0 10px 30px rgba(16,32,64,0.06); }
+    label { font-weight:700; display:block; margin-top:10px; color:#1b3551; }
+    select,input,textarea { width:100%; padding:10px; border-radius:8px; border:1px solid #d0d9e6; margin-top:6px; box-sizing:border-box; }
+    button.save { background:#2a5298; color:#fff; border:none; padding:10px 16px; border-radius:8px; font-weight:700; margin-top:12px; cursor:pointer; }
+    .remark-list { margin-top:18px; }
+    .remark { background:#f2f7ff; padding:12px; border-radius:8px; margin-bottom:8px; border-left:4px solid #f4b183; }
+    .top-row { display:flex; gap:12px; align-items:center; justify-content:space-between; }
+    .back { background:transparent; border:1px solid #cbd5e1; padding:8px 12px; border-radius:8px; cursor:pointer; }

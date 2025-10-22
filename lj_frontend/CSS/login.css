@@ -1,0 +1,147 @@
+body {
+      margin: 0;
+      padding: 0;
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #1f3a6b, #2a5298);
+      color: #fff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      text-align: center;
+      padding-top: 40px;
+    }
+
+    /* Heading */
+    .heading {
+      margin-bottom: 10px;
+      line-height: 1.2;
+    }
+    .heading .small {
+      font-size: 1.4rem;
+      font-weight: 400;
+      color: #e0e7ff;
+      letter-spacing: 2px;
+      font-family: 'Times New Roman', Times, serif;
+    }
+    .heading .big {
+      font-size: 3.4rem;
+      font-weight: 800;
+      color: #f4b183;
+      text-transform: uppercase;
+      font-family: Georgia, 'Times New Roman', Times, serif;
+    }
+
+    /* Card container */
+    .card-container {
+      display: flex;
+      gap: 50px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 80px;
+    }
+
+    /* Card */
+    .card {
+      background: #fff;
+      color: #333;
+      width: 220px;
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-8px);
+    }
+    .card img {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 15px;
+    }
+
+    /* Login & Signup forms */
+    .form-container {
+      background: #fff;
+      color: #333;
+      padding: 30px;
+      border-radius: 14px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+      width: 300px;
+      display: none;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .form-container h2 {
+      margin: 0 0 15px;
+      color: #1f3a6b;
+    }
+    .form-container input {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+      width: 100%;
+    }
+    .form-container button {
+      padding: 10px;
+      background: #2a5298;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.3s ease;
+    }
+    .form-container button:hover {
+      background: #1f3a6b;
+    }
+    .form-container .back-btn {
+      background: transparent;
+      color: #2a5298;
+      border: 1px solid #2a5298;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+    .form-container .back-btn:hover {
+      background: #2a5298;
+      color: white;
+    }
+
+    /* Show password button */
+    .input-with-toggle {
+  display: flex;
+  width: 100%;
+}
+.input-with-toggle input {
+  flex: 1; /* takes remaining space */
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px 0 0 8px;
+  font-size: 1rem;
+}
+.input-with-toggle .toggle-password {
+  flex: 0 0 70px; /* fixed width but flexible */
+  background: #e0e7ff;
+  color: #1f3a6b;
+  border: 1px solid #ccc;
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+    /* Signup prompt */
+    .form-container p {
+      font-size: 0.85rem;
+      color: #555;
+      cursor: pointer;
+    }
+    .form-container p span {
+      color: #2a5298;
+      font-weight: bold;
+    }
