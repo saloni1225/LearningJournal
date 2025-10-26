@@ -98,11 +98,22 @@ async function handleLogin() {
   if(!username || !password){ alert("❌ Enter all fields"); return; }
 
   if(selectedRole === "admin") {
-    // Hardcoded admin login (optional)
-    if(username==="admin" && password==="admin123") {
-      window.location.href="admin_entries.html";
-    } else { alert("❌ Invalid admin credentials"); }
-  } else if(selectedRole==="student") {
+  try {
+    const res = await fetch("http://localhost:5000/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "admin", username, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Login failed");
+
+    document.cookie = `token=${data.token}; path=/; max-age=3600`;
+    window.location.href = "admin_entries.html";
+  } catch (err) {
+    alert("❌ " + err.message);
+  }
+}
+ else if(selectedRole==="student") {
     try {
       const res = await fetch("http://localhost:5000/api/auth/login", {
         method:"POST",
