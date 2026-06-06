@@ -1,6 +1,8 @@
+//JournalEntry.js
 const mongoose = require("mongoose");
 
 const journalEntrySchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   usn: { type: String, required: true },
   studentName: { type: String, required: true },
   semester: { type: String, required: true },

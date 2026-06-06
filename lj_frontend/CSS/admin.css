@@ -15,7 +15,7 @@ body { font-family: Arial, sans-serif; background: #f7f9fc; margin: 0; padding: 
     button { cursor: pointer; transition: 0.2s; }
     button:hover { opacity: 0.85; }
 
-    .back-btn { background: #10b981; color: #fff; }
+    .logout-btn { background: #ef4444; color: #fff; border: none; }
     .reset-btn { background: #f43f5e; color: #fff; }
     .save-btn { background: #2563eb; color: #fff; }
 

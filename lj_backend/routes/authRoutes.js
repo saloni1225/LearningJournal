@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-
 
 // =================== SIGNUP ===================
 router.post("/signup", async (req, res) => {
@@ -43,22 +43,37 @@ router.post("/login", async (req, res) => {
   try {
     const { role, username, password } = req.body;
 
+    // Validate inputs
     if (!role || !username || !password) {
       return res.status(400).json({ message: "All fields are required." });
     }
 
+    // Find user by username and role
     const user = await User.findOne({ username, role });
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials." });
     }
 
+    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials." });
     }
 
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ message: "Server misconfigured: JWT_SECRET missing." });
+    }
+
+    const token = jwt.sign(
+      { userId: user._id, fullName: user.fullName, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    // Return token and user info
     res.json({
       message: "Login successful!",
+      token,
       userId: user._id,
       fullName: user.fullName,
       role: user.role,

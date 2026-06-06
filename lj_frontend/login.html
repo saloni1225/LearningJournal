@@ -54,7 +54,8 @@
   </div>
 
   <script>
-let selectedRole = "";
+let selectedRole = ""; // Role for login
+let signupRole = "student"; // Role for signup (default)
 
 // Show login form
 function showLogin(role) {
@@ -68,19 +69,33 @@ function showLogin(role) {
   document.getElementById("password").value = "";
 }
 
+// Go back from login to role cards
 function goBack() {
   document.getElementById("roleCards").style.display = "flex";
   document.getElementById("loginForm").style.display = "none";
 }
 
+// Show signup form
 function showStudentSignup() {
+  signupRole = "student"; // default
   document.getElementById("loginForm").style.display = "none";
   document.getElementById("signupForm").style.display = "flex";
+
+  // Update heading based on current role
+  document.querySelector("#signupForm h2").innerText =
+    selectedRole === "admin" ? "Admin Signup" : "Student Signup";
+
+  document.getElementById("signupFullName").value = "";
+  document.getElementById("signupUsername").value = "";
+  document.getElementById("signupPassword").value = "";
 }
 
+// Go back from signup to login
 function goBackSignup() {
   document.getElementById("signupForm").style.display = "none";
   document.getElementById("loginForm").style.display = "flex";
+  document.getElementById("loginTitle").innerText =
+    selectedRole === "admin" ? "Admin Login" : "Student Login";
 }
 
 // Toggle show/hide password
@@ -97,41 +112,25 @@ async function handleLogin() {
 
   if(!username || !password){ alert("❌ Enter all fields"); return; }
 
-  if(selectedRole === "admin") {
   try {
     const res = await fetch("http://localhost:5000/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: "admin", username, password }),
+      body: JSON.stringify({ role: selectedRole, username, password }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || "Login failed");
 
     document.cookie = `token=${data.token}; path=/; max-age=3600`;
-    window.location.href = "admin_entries.html";
+
+    if(selectedRole === "admin") window.location.href = "admin_entries.html";
+    else window.location.href = "index.html";
   } catch (err) {
     alert("❌ " + err.message);
   }
 }
- else if(selectedRole==="student") {
-    try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
-        method:"POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ role:"student", username, password })
-      });
-      const data = await res.json();
-      if(!res.ok) throw new Error(data.message || "Login failed");
 
-      // Store JWT token in cookie (or use secure storage)
-      document.cookie = `token=${data.token}; path=/; max-age=3600`; // 1 hour
-      window.location.href="index.html"; // redirect to student dashboard
-
-    } catch(err) { alert("❌ " + err.message); }
-  }
-}
-
-// Handle Student Signup
+// Handle Signup
 async function handleSignup() {
   const fullName = document.getElementById("signupFullName").value.trim();
   const username = document.getElementById("signupUsername").value.trim();
@@ -141,17 +140,21 @@ async function handleSignup() {
 
   try {
     const res = await fetch("http://localhost:5000/api/auth/signup", {
-      method:"POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ role:"student", fullName, username, password })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: signupRole, fullName, username, password }),
     });
     const data = await res.json();
     if(!res.ok) throw new Error(data.message || "Signup failed");
 
     alert("✅ " + data.message);
-    document.getElementById("signupForm").style.display="none";
-    document.getElementById("loginForm").style.display="flex";
-    document.getElementById("loginTitle").innerText="Student Login";
+
+    // Show login after signup
+    signupRole = "student";
+    document.getElementById("signupForm").style.display = "none";
+    document.getElementById("loginForm").style.display = "flex";
+    document.getElementById("loginTitle").innerText =
+      selectedRole === "admin" ? "Admin Login" : "Student Login";
 
   } catch(err) { alert("❌ " + err.message); }
 }

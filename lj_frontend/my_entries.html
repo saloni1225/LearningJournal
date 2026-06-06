@@ -6,6 +6,7 @@
 <title>My Entries | Learning Journal</title>
 <link rel="stylesheet" href="CSS/myentry.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="journalPdf.js"></script>
 </head>
 <body>
 
@@ -20,27 +21,32 @@
 <div id="entriesContainer"></div>
 
 <script>
-const { jsPDF } = window.jspdf;
-
 // === Authentication ===
-// === Authentication ===
-const token = getCookie("token"); // Read JWT from cookie
-if(!token) {
-  alert("Please login first.");
-  window.location.href = "login.html";
-}
-
-// Helper to read JWT cookie
 function getCookie(name) {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
   if (parts.length === 2) return parts.pop().split(";").shift();
 }
 
+function parseJwt(token) {
+  try { return JSON.parse(atob(token.split(".")[1])); } catch { return {}; }
+}
 
-// Logout
+const token = getCookie("token");
+if (!token) {
+  alert("Please login first.");
+  window.location.href = "login.html";
+}
+
+const payload = parseJwt(token);
+if (payload.role !== "student") {
+  alert("Access denied: Students only.");
+  window.location.href = "login.html";
+}
+
+
 function logoutUser() {
-    localStorage.removeItem("token");
+    document.cookie = "token=; path=/; max-age=0";
     window.location.href = "login.html";
 }
 
@@ -116,57 +122,15 @@ async function deleteEntry(id){
     }
 }
 
-// Download PDF
-async function downloadPDF(id){
+async function downloadPDF(id) {
     try {
         const res = await fetch(`http://localhost:5000/api/journal/${id}`, {
-            headers: { "Authorization": `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
         });
-        if(!res.ok) throw new Error("Failed to fetch entry");
+        if (!res.ok) throw new Error("Failed to fetch entry");
         const entry = await res.json();
-
-        const doc = new jsPDF(); 
-        let y=15;
-
-        doc.setFont("helvetica","bold"); 
-        doc.setFontSize(16); 
-        doc.text("Learning Journal Entry",105,y,{align:"center"}); 
-        y+=12;
-
-        doc.setFontSize(12); 
-        doc.setFont("helvetica","bold"); 
-        doc.text("Student Info:",14,y); y+=7;
-        doc.setFont("helvetica","normal");
-        doc.text(`USN: ${entry.usn}`,14,y); y+=6;
-        doc.text(`Name: ${entry.studentName}`,14,y); y+=6;
-        doc.text(`Semester: ${entry.semester}`,14,y); y+=6;
-        doc.text(`Section: ${entry.classSection}`,14,y); y+=10;
-
-        doc.setFont("helvetica","bold"); doc.text("Entry Info:",14,y); y+=7; doc.setFont("helvetica","normal");
-        doc.text(`Week Number: ${entry.week}`,14,y); y+=6;
-        doc.text(`Week Range: ${entry.weekRange}`,14,y); y+=6;
-        doc.text(`Course Code: ${entry.courseCode}`,14,y); y+=6;
-        doc.text(`Course Name: ${entry.courseName}`,14,y); y+=6;
-        doc.text(`Module: ${entry.module}`,14,y); y+=10;
-
-        function addWrappedText(label,value){
-            doc.setFont("helvetica","bold"); doc.text(`${label}:`,14,y); y+=6;
-            doc.setFont("helvetica","normal");
-            const lines = doc.splitTextToSize(value||"-",180); 
-            doc.text(lines,14,y); 
-            y+=lines.length*6+4;
-        }
-
-        addWrappedText("Topics Covered",entry.topics);
-        addWrappedText("Key Terms Learnt",entry.keyTerms);
-        addWrappedText("Summary of Learning",entry.summary);
-        addWrappedText("Doubts / Clarifications Needed",entry.doubts);
-        addWrappedText("How I Covered Missed Content",entry.makeup);
-        if(entry.remark) addWrappedText("Admin Remark", entry.remark);
-
-        doc.save(`Journal_${entry.usn}_Week${entry.week}.pdf`);
-
-    } catch(err){
+        generateJournalPDF(entry);
+    } catch (err) {
         alert("❌ Could not download PDF: " + err.message);
     }
 }

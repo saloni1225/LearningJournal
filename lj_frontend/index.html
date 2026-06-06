@@ -106,19 +106,25 @@
   </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  // Check JWT token
+document.addEventListener("DOMContentLoaded", async () => {
   const token = getCookie("token");
-  if(!token){
+  if (!token) {
     alert("Please login first.");
     window.location.href = "login.html";
     return;
   }
 
-  // Prefill student info from backend or token payload
   const payload = parseJwt(token);
-  document.getElementById("studentName").value = payload.fullName;
-  document.getElementById("usn").value = payload.usn || "";
+  if (payload.role !== "student") {
+    alert("Access denied: Students only.");
+    window.location.href = "login.html";
+    return;
+  }
+
+  const editId = new URLSearchParams(window.location.search).get("editId");
+  let editingEntryId = null;
+
+  document.getElementById("studentName").value = payload.fullName || "";
 
   // USN validation
   const usnInput = document.getElementById("usn");
@@ -142,7 +148,41 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Submit journal
+  if (editId) {
+    try {
+      const res = await fetch(`http://localhost:5000/api/journal/${editId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const entry = await res.json();
+      if (!res.ok) throw new Error(entry.message || "Failed to load entry");
+
+      editingEntryId = editId;
+      document.querySelector("#journalForm h2").textContent = "Edit Journal Entry";
+      document.querySelector("#journalForm button[type='submit']").textContent = "Update Entry";
+
+      document.getElementById("week").value = entry.week || "";
+      if (entry.weekRange && entry.weekRange.includes(" - ")) {
+        const [start, end] = entry.weekRange.split(" - ");
+        document.getElementById("startDate").value = start;
+        document.getElementById("endDate").value = end;
+      }
+      document.getElementById("courseCode").value = entry.courseCode || "";
+      document.getElementById("courseName").value = entry.courseName || "";
+      document.getElementById("module").value = entry.module || "";
+      document.getElementById("topics").value = entry.topics || "";
+      document.getElementById("keyTerms").value = entry.keyTerms || "";
+      document.getElementById("summary").value = entry.summary || "";
+      document.getElementById("doubts").value = entry.doubts || "";
+      document.getElementById("makeup").value = entry.makeup || "";
+      document.getElementById("usn").value = entry.usn || "";
+      document.getElementById("studentName").value = entry.studentName || payload.fullName || "";
+      document.getElementById("semester").value = entry.semester || "";
+      document.getElementById("classSection").value = entry.classSection || "";
+    } catch (err) {
+      alert("❌ " + err.message);
+    }
+  }
+
   document.getElementById("journalForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -160,30 +200,39 @@ document.addEventListener("DOMContentLoaded", () => {
       usn: document.getElementById("usn").value.trim().toUpperCase(),
       studentName: document.getElementById("studentName").value.trim(),
       semester: document.getElementById("semester").value,
-      classSection: document.getElementById("classSection").value
+      classSection: document.getElementById("classSection").value,
     };
 
-    // Validate dates
     const startDate = document.getElementById("startDate").value;
     const endDate = document.getElementById("endDate").value;
     if (!startDate || !endDate) { alert("Please select both start and end dates."); return; }
     if (new Date(startDate) > new Date(endDate)) { alert("End Date cannot be before Start Date."); return; }
 
+    const url = editingEntryId
+      ? `http://localhost:5000/api/journal/${editingEntryId}`
+      : "http://localhost:5000/api/journal";
+    const method = editingEntryId ? "PATCH" : "POST";
+
     try {
-      const res = await fetch("http://localhost:5000/api/journal", {
-        method: "POST",
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(entryData)
+        body: JSON.stringify(entryData),
       });
 
       const data = await res.json();
-      if(!res.ok) throw new Error(data.message || "Failed to save entry");
-      alert("✅ Entry saved successfully!");
-      document.getElementById("journalForm").reset();
-    } catch(err){
+      if (!res.ok) throw new Error(data.message || "Failed to save entry");
+      alert(editingEntryId ? "✅ Entry updated successfully!" : "✅ Entry saved successfully!");
+      if (editingEntryId) {
+        window.location.href = "my_entries.html";
+      } else {
+        document.getElementById("journalForm").reset();
+        document.getElementById("studentName").value = payload.fullName || "";
+      }
+    } catch (err) {
       alert("❌ " + err.message);
     }
   });
